@@ -16,8 +16,5 @@ ftp: False
 
 <h3> An example change would look like: </h3>
 ```
-[VARIABLES]
-scenario_name: Napa_geomean
-folder_path: C:\Disasters\Napa
-ftp: False
+code
 ```
