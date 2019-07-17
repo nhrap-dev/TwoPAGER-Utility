@@ -1,6 +1,6 @@
 # TwoPAGER
 
-<h1>To use: </h1>
+<h2>To use: </h2>
 Only modify the Config.ini file
 
 The file reads as
