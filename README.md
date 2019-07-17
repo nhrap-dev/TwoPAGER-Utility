@@ -15,6 +15,4 @@ ftp: False
 2) change ```folder_path``` to the folder path you want the output stored
 
 <h3> An example change would look like: </h3>
-```
-code
-```
+``` code ```
