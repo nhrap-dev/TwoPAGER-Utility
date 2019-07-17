@@ -141,7 +141,7 @@ def two_pager(scenario_name, folder_path, ftp=False):
     print('Hazus earthquake results available locally at: ' + folder_path + '\\' + scenario_name)
 
 #Execute TwoPAGER function using variables given in Config.ini
-os.chdir('C:\code')
+# os.chdir('C:\code')
 config = configparser.ConfigParser()
 config.read('./Config.ini')
 two_pager(config.get('VARIABLES', 'scenario_name'), config.get('VARIABLES', 'folder_path'), config.getboolean('VARIABLES', 'ftp'))
