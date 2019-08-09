@@ -1,5 +1,7 @@
 # TwoPAGER
 
+Prepares the files from a Hazus earthquake run to be send to the USGS for creating the TwoPAGER report.
+
 <h2>To use: </h2>
 Only modify the Config.ini file
 
