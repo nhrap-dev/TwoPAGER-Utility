@@ -5,10 +5,10 @@ import sys
 try:
     if sys.version[0] == '2':
         import Tkinter as tk
+        from Tkinter import ttk
         from Tkinter import *
         import tkMessageBox as messagebox
         import tkFileDialog as filedialog
-        
         
         def read_sql(comp_name, cnxn, scenario_name):
             #Select Hazus results from SQL Server scenario database
@@ -46,11 +46,12 @@ try:
             two_pager_df = {'building_damage_occup': hazus_results_df['building_damage_occup'], 'building_damage_bldg_type': hazus_results_df['building_damage_bldg_type'],
                                 'tract_results': tract_results, 'county_results': county_results}
             for name, dataframe in two_pager_df.iteritems():
-                path = folder_path + '\\' + scenario_name + '\\' + name + '.txt'
+                path = folder_path + '\\' + scenario_name + '\\' + name + '.csv'
                 dataframe.to_csv(path)
                 
     elif sys.version[0] == '3':
         import tkinter as tk
+        from tkinter import ttk
         from tkinter import *
         from tkinter import messagebox
         from tkinter import filedialog
@@ -92,7 +93,7 @@ try:
             two_pager_df = {'building_damage_occup': hazus_results_df['building_damage_occup'], 'building_damage_bldg_type': hazus_results_df['building_damage_bldg_type'],
                                 'tract_results': tract_results, 'county_results': county_results}
             for name, dataframe in two_pager_df.items():
-                path = folder_path + '\\' + scenario_name + '\\' + name + '.txt'
+                path = folder_path + '\\' + scenario_name + '\\' + name + '.csv'
                 dataframe.to_csv(path)
 except:
     import ctypes  # An included library with Python install.   
@@ -104,17 +105,19 @@ try:
     import pyodbc as py
     import shapely
     from shapely import *
+    from shapely import wkt
     from shapely.wkt import loads
     from shapely.geometry import mapping, Polygon
     import fiona
+    import geopandas as gpd
     import numpy as np
     import os
     import paramiko
 except:
     import ctypes  # An included library with Python install.   
     ctypes.windll.user32.MessageBoxW(None, u"Exception raised: " + str(sys.exc_info()[1]), u'HAZUS - Message', 0)
-else:
-    
+
+def run_gui():
     # Create app
     root = tk.Tk()
     
@@ -124,12 +127,35 @@ else:
     root.configure(background='#282a36')
                    
     # App functions
+    def get_scenarios():
+        comp_name = os.environ['COMPUTERNAME']
+        c = py.connect('Driver=ODBC Driver 11 for SQL Server;SERVER=' +
+            comp_name + '\HAZUSPLUSSRVR; UID=SA;PWD=Gohazusplus_02')
+        cursor = c.cursor()
+        cursor.execute('SELECT * FROM sys.databases')
+        exclusion_rows = ['master', 'tempdb', 'model', 'msdb', 'syHazus', 'CDMS', 'flTmpDB']
+        scenarios = []
+        for row in cursor:
+            if row[0] not in exclusion_rows:
+                scenarios.append(row[0])
+        return scenarios
+
     def browsefunc():
         root.directory = filedialog.askdirectory()
         pathlabel_outputDir.config(text=root.directory)
+
+    def on_field_change(index, value, op):
+        try:
+            input_scenarioName = dropdownMenu.get()
+            check = input_scenarioName in root.directory
+            if not check:
+                pathlabel_outputDir.config(text='Output directory: ' + root.directory + '/' + input_scenarioName)           
+        except:
+            pass
     
     def run():
-        input_scenarioName = text_name.get("1.0",'end-1c').strip()
+        # input_scenarioName = text_name.get("1.0",'end-1c').strip()
+        input_scenarioName = dropdownMenu.get()
         try:
             two_pager(input_scenarioName, root.directory, False)
             tk.messagebox.showinfo("HAZUS Message Bot", "Success! Output files can be found at: " + str(root.directory) + "/" + input_scenarioName)
@@ -154,8 +180,8 @@ else:
         
     def to_ftp(folder_path, scenario_name):
         #Upload TwoPAGER text files and shapefile to FEMA FTP site
-        load_files = ['building_damage_occup.txt', 'building_damage_bldg_type.txt', 'tract_results.txt',
-                        'county_results.txt', 'tract_results.dbf', 'tract_results.shp']
+        load_files = ['building_damage_occup.csv', 'building_damage_bldg_type.csv', 'tract_results.csv',
+                        'county_results.csv', 'tract_results.dbf', 'tract_results.shp']
         credentials = {'host': 'data.femadata.com', 'username': 'jordan.burns', 'password': 'Tt&jrayEZYL[*q2+',
                         'dir': '/FIMA/NHRAP/Earthquake/TwoPAGER'}
         transport = paramiko.Transport(credentials['host'], 22)
@@ -175,45 +201,52 @@ else:
         return credentials
     
     def to_shp(folder_path, scenario_name, hazus_results_df, tract_results):
+            # spatial_df = hazus_results_df['tract_spatial'].drop(['Tract'], axis=1).reset_index()
+        df = tract_results.join(hazus_results_df['tract_spatial'])
+        df['Coordinates'] = df['Shape'].apply(wkt.loads)
+        gdf = gpd.GeoDataFrame(df, geometry='Coordinates')
+        crs={'proj':'longlat', 'ellps':'WGS84', 'datum':'WGS84','no_defs':True}
+        gdf.crs = crs
+        gdf.to_file(folder_path + '/' + scenario_name + '/' + 'tract_results.shp', driver='ESRI Shapefile')
             #Create shapefile of TwoPAGER tract table
-            schema = {
-                'geometry': 'Polygon',
-                'properties': {'Tract': 'str',
-                                'CountyFips': 'int',
-                                'EconLoss': 'float',
-                                'Population': 'int',
-                                'Households': 'int',
-                                'DebrisW': 'float',
-                                'DebrisS': 'float',
-                                'DisplHouse': 'float',
-                                'Shelter': 'float',
-                                'NonFatal5p': 'float',
-                                'NoDamage': 'float',
-                                'GreenTag': 'float',
-                                'YellowTag': 'float',
-                                'RedTag': 'float'},
-                                }
-            with fiona.open(path=folder_path + '\\' + scenario_name + '\\tract_results.shp', mode='w', driver='ESRI Shapefile', schema=schema, crs={'proj':'longlat', 'ellps':'WGS84', 'datum':'WGS84', 'no_defs':True}) as c:
-                for index, row in hazus_results_df['tract_spatial'].iterrows():
-                    for i in row:
-                        tract = shapely.wkt.loads(i)
-                        c.write({'geometry': mapping(tract),
-                                'properties': {'Tract': index,
-                                                'CountyFips': str(np.int64(tract_results.loc[str(index), 'CountyFips'])),
-                                                'EconLoss': str(np.float64(tract_results.loc[str(index), 'EconLoss'])),
-                                                'Population': str(np.int64(tract_results.loc[str(index), 'Population'])),
-                                                'Households': str(np.int64(tract_results.loc[str(index), 'Households'])),
-                                                'DebrisW': str(np.float64(tract_results.loc[str(index), 'DebrisW'])),
-                                                'DebrisS': str(np.float64(tract_results.loc[str(index), 'DebrisS'])),
-                                                'DisplHouse': str(np.float64(tract_results.loc[str(index), 'DisplHouse'])),
-                                                'Shelter': str(np.float64(tract_results.loc[str(index), 'Shelter'])),
-                                                'NonFatal5p': str(np.float64(tract_results.loc[str(index), 'NonFatal5p'])),
-                                                'NoDamage': str(np.float64(tract_results.loc[str(index), 'NoDamage'])),
-                                                'GreenTag': str(np.float64(tract_results.loc[str(index), 'GreenTag'])),
-                                                'YellowTag': str(np.float64(tract_results.loc[str(index), 'YellowTag'])),
-                                                'RedTag': str(np.float64(tract_results.loc[str(index), 'RedTag']))}
-                                                })
-            c.close()
+            # schema = {
+            #     'geometry': 'Polygon',
+            #     'properties': {'Tract': 'str',
+            #                     'CountyFips': 'int',
+            #                     'EconLoss': 'float',
+            #                     'Population': 'int',
+            #                     'Households': 'int',
+            #                     'DebrisW': 'float',
+            #                     'DebrisS': 'float',
+            #                     'DisplHouse': 'float',
+            #                     'Shelter': 'float',
+            #                     'NonFatal5p': 'float',
+            #                     'NoDamage': 'float',
+            #                     'GreenTag': 'float',
+            #                     'YellowTag': 'float',
+            #                     'RedTag': 'float'},
+            #                     }
+            # with fiona.open(path=folder_path + '\\' + scenario_name + '\\tract_results.shp', mode='w', driver='ESRI Shapefile', schema=schema, crs={'proj':'longlat', 'ellps':'WGS84', 'datum':'WGS84', 'no_defs':True}) as c:
+            #     for index, row in hazus_results_df['tract_spatial'].iterrows():
+            #         for i in row:
+            #             tract = shapely.wkt.loads(i)
+            #             c.write({'geometry': mapping(tract),
+            #                     'properties': {'Tract': index,
+            #                                     'CountyFips': str(np.int64(tract_results.loc[str(index), 'CountyFips'])),
+            #                                     'EconLoss': str(np.float64(tract_results.loc[str(index), 'EconLoss'])),
+            #                                     'Population': str(np.int64(tract_results.loc[str(index), 'Population'])),
+            #                                     'Households': str(np.int64(tract_results.loc[str(index), 'Households'])),
+            #                                     'DebrisW': str(np.float64(tract_results.loc[str(index), 'DebrisW'])),
+            #                                     'DebrisS': str(np.float64(tract_results.loc[str(index), 'DebrisS'])),
+            #                                     'DisplHouse': str(np.float64(tract_results.loc[str(index), 'DisplHouse'])),
+            #                                     'Shelter': str(np.float64(tract_results.loc[str(index), 'Shelter'])),
+            #                                     'NonFatal5p': str(np.float64(tract_results.loc[str(index), 'NonFatal5p'])),
+            #                                     'NoDamage': str(np.float64(tract_results.loc[str(index), 'NoDamage'])),
+            #                                     'GreenTag': str(np.float64(tract_results.loc[str(index), 'GreenTag'])),
+            #                                     'YellowTag': str(np.float64(tract_results.loc[str(index), 'YellowTag'])),
+            #                                     'RedTag': str(np.float64(tract_results.loc[str(index), 'RedTag']))}
+            #                                     })
+            # c.close()
     
     #Roll up subfunctions into one overall function
     def two_pager(scenario_name, folder_path, ftp=False):
@@ -233,10 +266,14 @@ else:
     label_scenarioName.grid(row=3, column=0, padx=20, pady=(20, 10), sticky=W)
     
     label_name = tk.Label(root, text='Name: ', font='Helvetica 8 bold', bg='#282a36', fg='#f8f8f2')
-    label_name.grid(row=4, column=0, sticky=W, pady=(0, 5), padx=40)
-    text_name = tk.Text(root, height=1, width=35, relief=FLAT)
-    text_name.grid(row=4, column=0, pady=(0, 5), sticky=W, padx=120)
-    text_name.insert(END, '')
+    label_name.grid(row=4, column=0, sticky=W, pady=(0, 5), padx=140)
+    v = StringVar()
+    v.trace('w', on_field_change)
+    dropdownMenu = ttk.Combobox(root, textvar=v, values=get_scenarios(), width=35)
+    dropdownMenu.grid(row = 4, column =0, padx=(195, 0), pady=(0,5), sticky='W')
+    # text_name = tk.Text(root, height=1, width=35, relief=FLAT)
+    # text_name.grid(row=4, column=0, pady=(0, 5), sticky=W, padx=120)
+    # text_name.insert(END, '')
     
     # Out DAT file name
     label_outputDir = tk.Label(root, text='Output: Select a directory for the output files.', font='Helvetica 10 bold', bg='#282a36', fg='#f8f8f2')
@@ -249,7 +286,9 @@ else:
     pathlabel_outputDir.grid(row=11, column=0, pady=(0, 20), padx=40, sticky=W)
     
     button_run = tk.Button(root, text='Run', width=20, command=run, relief=FLAT, bg='#6272a4', fg='#f8f8f2', cursor="hand2", font='Helvetica 8 bold')
-    button_run.grid(row=12, column=0, pady=(0, 20))
+    button_run.grid(row=12, column=0, pady=(0, 20), padx=180)
     
     # Run app
     root.mainloop()
+
+run_gui()
