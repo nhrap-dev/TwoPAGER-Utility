@@ -4,7 +4,7 @@
 
 * If you have Anaconda installed, the GUI should launch from double clicking the .bat file and no config modification is necessary.
 
-* If you do not have Anaconda installed, you can try opening a terminal in the ./src folder and running "python TwoPAGER_Utility.py". If you do not have the correct libraries installed, this might not work.
+* If you do not have Anaconda installed, you can try opening a terminal in the ./src folder and running `python TwoPAGER_Utility.py`. If you do not have the correct libraries installed, this might not work.
 
 
 !!Old documentation below!!:
