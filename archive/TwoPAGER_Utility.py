@@ -266,7 +266,7 @@ def run_gui():
     label_scenarioName.grid(row=3, column=0, padx=20, pady=(20, 10), sticky=W)
     
     label_name = tk.Label(root, text='Name: ', font='Helvetica 8 bold', bg='#282a36', fg='#f8f8f2')
-    label_name.grid(row=4, column=0, sticky=W, pady=(0, 5), padx=140)
+    label_name.grid(row=4, column=0, sticky=W, pady=(0, 5), padx=24)
     v = StringVar()
     v.trace('w', on_field_change)
     dropdownMenu = ttk.Combobox(root, textvar=v, values=get_scenarios(), width=35)
