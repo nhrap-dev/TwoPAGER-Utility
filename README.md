@@ -1,35 +1,26 @@
 # TwoPAGER
 
-<h2>!!Marked for update!!</h2>
+<h2>Requirements</h2>
 
-* If you have Anaconda installed, the GUI should launch from double clicking the .bat file and no config modification is necessary.
+- Preferably have anaconda installed
 
-* If you do not have Anaconda installed, you can try opening a terminal in the ./src folder and running `python TwoPAGER_Utility.py`. If you do not have the correct libraries installed, this might not work.
+- If you do not have Anaconda installed, have Python 3.X installed
 
+<h2>Use</h2>
 
-<h2>##!!Old documentation below!!:</h2>
+Double click on TwoPAGER.py to run the tool
 
-Prepares the files from a Hazus earthquake run to be send to the USGS for creating the TwoPAGER report.
+<h2>Package Dependencies</h2>
 
-<h2>To use: </h2>
-Only modify the Config.ini file
+Ensure these Python packages are installed prior to running. If you have HazPy, you shouldn't have to worry about these
 
-The file reads as
+Install a package by opening a command prompt and using `conda install PACKAGENAME`. If you do not have Anaconda installed, use `pip install PACKAGENAME`.
+
+Depdenent Python packages
+
 ```
-[VARIABLES]
-scenario_name: ak_regionM7
-folder_path: H:\Events\National\Alaska_2018
-ftp: False
-```
-
-1) change ```scenario_name``` to your scenario.
-2) change ```folder_path``` to the folder path you want the output stored.
-
-<h3> An example change would look like </h3>
-
-``` 
-[VARIABLES]
-scenario_name: Napa_geomean
-folder_path: C:\Disasters\Napa
-ftp: False 
+pyodbc
+tkinter
+pandas
+PIL
 ```
